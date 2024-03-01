@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "PRTG React",
-  "id": "paidifitz-prtgreact-datasource",
+  "id": "sureskills-prtgreact-datasource",
   "metrics": true,
   "info": {
     "description": "Vizualize your prtg data with grafana dashboards",

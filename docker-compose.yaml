@@ -2,7 +2,7 @@ version: '3.0'
 
 services:
   grafana:
-    container_name: 'paidifitz-prtgreact-datasource'
+    container_name: 'sureskills-prtgreact-datasource'
     platform: 'linux/amd64'
     build:
       context: ./.config
@@ -12,5 +12,5 @@ services:
     ports:
       - 3000:3000/tcp
     volumes:
-      - ./dist:/var/lib/grafana/plugins/paidifitz-prtgreact-datasource
+      - ./dist:/var/lib/grafana/plugins/sureskills-prtgreact-datasource
       - ./provisioning:/etc/grafana/provisioning
