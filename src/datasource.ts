@@ -13,7 +13,7 @@ import { SENSOR_DATA_MAPPINGS } from './constants';
 
 import _ from 'lodash';
 import { getBackendSrv, isFetchError } from '@grafana/runtime';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, from } from 'rxjs';
 import * as utils from "./utils";
 // import defaults from 'lodash/defaults';
 
@@ -103,17 +103,24 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           dates_array = this.cache[cache_key]['dates_array']
           results_array = this.cache[cache_key]['results_array']
         } else {
-          const response = await this.request('historicdata.json', params);
+          // const response = await this.request('historicdata.json', params);
+          const response = await this.directRequest('historicdata.json', params);
+          const data = await response.json()
 
-          if ((response.data.histdata).length > 0) {
+          if ((data.histdata).length > 0) {
             let channel_name = target.channel_name
             if (channel_name.includes('Traffic')) {
               channel_name = channel_name + ' (Speed)'
             }
-            response.data.histdata.forEach(function(x:any) {
-              if (parseFloat(x[channel_name]) > 0) {
-                results_array.push(x[channel_name]);
-                dates_array.push(convertPRTGDateTimeToISO(x.datetime));
+            data.histdata.forEach(function(x:any) {
+              // To combat issue with keys being padded with space.
+              for (const key in x) {
+                if (x.hasOwnProperty(key)) {
+                  if (key.trim() === channel_name) {
+                    results_array.push(x[key]);
+                    dates_array.push(convertPRTGDateTimeToISO(x.datetime));
+                  }
+                }
               }
             })
           }
@@ -136,8 +143,10 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           last_value = this.cache[cache_key]['last_value']
           datetime = this.cache[cache_key]['datetime']
         } else {
-          const response = await this.request('getsensordetails.json', params);
-          last_value = response.data.sensordata[SENSOR_DATA_MAPPINGS[target.filter_property]]
+          // const response = await this.request('getsensordetails.json', params);
+          const response = await this.directRequest('getsensordetails.json', params);
+          const data = await response.json()
+          last_value = data.sensordata[SENSOR_DATA_MAPPINGS[target.filter_property]]
           this.cache[cache_key] = {'last_value': last_value, 'datetime': datetime, 'timestamp': Date.now()}
         }
 
@@ -159,9 +168,11 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
           datetime = this.cache[cache_key]['datetime']
         } else {
           try {
-            const response = await this.request('table.json', params);
-            if ((response.data.channels).length > 0) {
-              const channel = response.data.channels.find(ob=>(ob.name === target.channel_name))
+            // const response = await this.request('table.json', params);
+            const response = await this.directRequest('table.json', params);
+            const data = await response.json()
+            if ((data.channels).length > 0) {
+              const channel = data.channels.find(ob=>(ob.name === target.channel_name))
               converted_value = channel.lastvalue_raw
               datetime = convertPRTGDateTimeToISO(channel.datetime)
               this.cache[cache_key] = {'converted_value': converted_value, 'datetime': datetime, 'timestamp': Date.now()}
@@ -199,16 +210,32 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
     return lastValueFrom(response);
   }
 
+  // async directRequest(route_path: string, params?: string) {
+  //   const response = await fetch(`${this.base_url}${route_path}${params?.length ? `?${params}` : '?'}&apitoken=${this.api_token}`);
+  //   if (!response.ok) {
+  //     throw new Error(`HTTP Error! Status: ${response.statusText}`);
+  //   }
+  //   return await response;
+  // }
+
+  async directRequest(route_path: string, params?: string) {
+    const response = from(
+      fetch(`${this.base_url}${route_path}${params?.length ? `?${params}` : '?'}&apitoken=${this.api_token}`)
+    );
+    return lastValueFrom(response);
+  }
+
   async testDatasource() {
     // Implement a health check for your data source.
     const default_error = 'Cannot connect to API';
 
     try {
-      const response = await this.request('status.json', '');
+      const response = await this.directRequest('status.json', '')
       if (response.status === 200) {
+        const data = await response.json()
         return {
           status: 'success',
-          message: 'Success. Version: ' + response.data.Version + ' returned from PTRG.',
+          message: 'Success. Version: ' + data.Version + ' returned from PTRG.',
         };
       } else {
         return {
@@ -232,4 +259,39 @@ export class DataSource extends DataSourceApi<MyQuery, MyDataSourceOptions> {
       };
     }
   }
+
+  // async testDatasource() {
+  //   // Implement a health check for your data source.
+  //   const default_error = 'Cannot connect to API';
+
+  //   try {
+  //     const response = await this.request('status.json', '');
+  //     if (response.status === 200) {
+  //       return {
+  //         status: 'success',
+  //         message: 'Success. Version: ' + response.data.Version + ' returned from PTRG.',
+  //       };
+  //     } else {
+  //       return {
+  //         status: 'error',
+  //         message: response.statusText ? response.statusText : default_error,
+  //       };
+  //     }
+  //   } catch (err) {
+  //     let message = '';
+  //     if (_.isString(err)) {
+  //       message = err;
+  //     } else if (isFetchError(err)) {
+  //       message = 'Fetch error: ' + (err.statusText ? err.statusText : default_error);
+  //       if (err.data && err.data.error && err.data.error.code) {
+  //         message += ': ' + err.data.error.code + '. ' + err.data.error.message;
+  //       }
+  //     }
+  //     return {
+  //       status: 'error',
+  //       message,
+  //     };
+  //   }
+  // }
+
 }
