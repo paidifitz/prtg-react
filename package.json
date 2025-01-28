@@ -1,6 +1,6 @@
 {
   "name": "prtgreact",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Vizualize your prtg data with grafana dashboards",
   "scripts": {
     "build": "webpack -c ./.config/webpack/webpack.config.ts --env production",
@@ -51,7 +51,7 @@
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
     "typescript": "4.8.4",
-    "webpack": "^5.86.0",
+    "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4",
     "webpack-livereload-plugin": "^3.0.2"
   },
